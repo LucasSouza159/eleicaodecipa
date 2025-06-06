@@ -155,5 +155,28 @@ CREATE TABLE IF NOT EXISTS `atas` (
     `nome_arquivo_fisico` VARCHAR(255) NULL COMMENT 'Nome do arquivo PDF salvo no servidor (se aplicável)',
 
     FOREIGN KEY (`eleicao_id`) REFERENCES `eleicoes`(`id`) ON DELETE CASCADE ON UPDATE CASCADE
-    -- FOREIGN KEY (`gerada_por_usuario_id`) REFERENCES `usuarios_sistema`(`id`) ON DELETE SET NULL ON UPDATE CASCADE; -- Exemplo se houver tabela de usuários do sistema
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Tabela para Atas e Documentos Gerados do Processo Eleitoral';
+
+-- Tabela para administradores do sistema
+CREATE TABLE IF NOT EXISTS `administradores` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Identificador único do administrador',
+    `nome_completo` VARCHAR(255) NOT NULL COMMENT 'Nome completo do administrador',
+    `email` VARCHAR(255) NOT NULL UNIQUE COMMENT 'Email de login do administrador (deve ser único)',
+    `senha_hash` VARCHAR(255) NOT NULL COMMENT 'Hash da senha de acesso',
+    `nivel_acesso` ENUM('SuperAdmin', 'Admin') NOT NULL DEFAULT 'Admin' COMMENT 'Nível de permissão do administrador',
+    `status_admin` ENUM('Ativo', 'Inativo') NOT NULL DEFAULT 'Ativo' COMMENT 'Status da conta do administrador',
+    `data_cadastro` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Data e hora do cadastro do administrador',
+    `ultimo_login` DATETIME NULL COMMENT 'Data e hora do último login bem-sucedido'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Tabela de administradores do sistema CIPA Fácil';
+
+-- Tabela de Logs do Sistema
+CREATE TABLE IF NOT EXISTS `logs` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'Identificador único do log',
+    `timestamp_ocorrencia` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Momento da ocorrência do evento',
+    `nivel_log` ENUM('INFO', 'WARNING', 'ERROR', 'CRITICAL', 'AUDIT') NOT NULL DEFAULT 'INFO' COMMENT 'Nível de severidade/importância do log',
+    `usuario_id` INT NULL COMMENT 'ID do usuário associado ao evento (pode ser de empresas, comissao, funcionarios, administradores)',
+    `tipo_usuario` ENUM('Empresa', 'Comissao', 'Funcionario', 'Admin', 'Sistema') NULL COMMENT 'Tipo de usuário que originou a ação',
+    `acao_realizada` VARCHAR(255) NOT NULL COMMENT 'Descrição da ação/evento (ex: LOGIN_SUCESSO, CRIACAO_ELEICAO)',
+    `detalhes_log` TEXT NULL COMMENT 'Detalhes adicionais do log, pode ser um JSON com parâmetros, IDs afetados, etc.',
+    `endereco_ip` VARCHAR(45) NULL COMMENT 'Endereço IP de origem da requisição'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Tabela para registros de logs de eventos e auditoria do sistema';

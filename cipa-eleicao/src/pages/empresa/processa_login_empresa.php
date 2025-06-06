@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once '../../scripts/db_connection.php'; // Inclui o arquivo de conexão
+require_once '../../scripts/utils.php';      // Inclui registrarLog
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $login = trim($_POST['login'] ?? ''); // Pode ser CNPJ ou Email
@@ -25,28 +26,32 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if ($empresa && password_verify($senha, $empresa['senha_hash'])) {
             // Login bem-sucedido
             $_SESSION['empresa_id'] = $empresa['id'];
-            $_SESSION['empresa_nome_fantasia'] = $empresa['nome_fantasia']; // Corrigido para nome_fantasia como no cadastro
+            $_SESSION['empresa_nome_fantasia'] = $empresa['nome_fantasia'];
 
-            // Regenerar ID da sessão para segurança
             session_regenerate_id(true);
+
+            registrarLog($pdo, 'AUDIT', 'LOGIN_EMPRESA_SUCESSO', ['empresa_id' => $empresa['id'], 'login_usado' => $login], $empresa['id'], 'Empresa');
 
             header("Location: painel_empresa.php");
             exit();
         } else {
-            // Credenciais inválidas
+            registrarLog($pdo, 'WARNING', 'LOGIN_EMPRESA_FALHA', ['login_usado' => $login, 'motivo' => 'Credenciais invalidas']);
             $_SESSION['erro_login'] = "CNPJ/Email ou Senha inválidos.";
+            $_SESSION['dados_formulario_login'] = ['login' => $login]; // Para repopular
             header("Location: login_empresa.php");
             exit();
         }
     } catch (PDOException $e) {
-        error_log("Erro de login: " . $e->getMessage());
+        error_log("Erro de login (Empresa): " . $e->getMessage());
+        registrarLog($pdo, 'ERROR', 'LOGIN_EMPRESA_ERRO_DB', ['login_usado' => $login, 'erro' => $e->getMessage()]);
         $_SESSION['erro_login'] = "Erro no sistema ao tentar fazer login. Tente novamente mais tarde.";
+        $_SESSION['dados_formulario_login'] = ['login' => $login];
         header("Location: login_empresa.php");
         exit();
     }
 
 } else {
-    // Redirecionar se não for POST
+    registrarLog($pdo ?? null, 'INFO', 'ACESSO_INVALIDO_PROCESSO_LOGIN_EMPRESA', ['metodo_http' => $_SERVER["REQUEST_METHOD"]]);
     header("Location: login_empresa.php");
     exit();
 }

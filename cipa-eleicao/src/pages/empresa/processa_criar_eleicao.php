@@ -1,8 +1,9 @@
 <?php
-require_once '../../scripts/auth_empresa.php'; // Garante autenticação e inicia sessão
-require_once '../../scripts/db_connection.php'; // Conexão com o banco
+require_once '../../scripts/auth_empresa.php';
+require_once '../../scripts/db_connection.php';
+require_once '../../scripts/utils.php';
 
-$empresa_id = $_SESSION['empresa_id'];
+$empresa_id = $_SESSION['empresa_id']; // Definido em auth_empresa.php
 $erros = [];
 $dados_formulario = $_POST; // Para repopular o formulário em caso de erro
 
@@ -99,20 +100,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $stmt->bindParam(':observacoes_gerais', $observacoes_gerais);
 
             $stmt->execute();
+            $nova_eleicao_id = $pdo->lastInsertId();
 
-            $_SESSION['mensagem_sucesso'] = "Eleição criada com sucesso!";
+            registrarLog($pdo, 'AUDIT', 'CRIACAO_ELEICAO_SUCESSO', ['eleicao_id' => $nova_eleicao_id, 'empresa_id' => $empresa_id, 'titulo' => $titulo_eleicao], $empresa_id, 'Empresa');
+
+            $_SESSION['mensagem_sucesso'] = "Eleição '" . htmlspecialchars($titulo_eleicao) . "' criada com sucesso!";
             header("Location: gerenciar_eleicoes.php");
             exit();
 
         } catch (PDOException $e) {
-            error_log("Erro ao criar eleição: " . $e->getMessage());
-            $_SESSION['erros_criar_eleicao'] = ["Erro ao salvar a eleição no banco de dados. Detalhe: " . $e->getMessage()]; // Mostrar erro do DB para debug
+            error_log("Erro ao criar eleição (Empresa ID: $empresa_id): " . $e->getMessage());
+            registrarLog($pdo, 'ERROR', 'CRIACAO_ELEICAO_FALHA_DB', ['empresa_id' => $empresa_id, 'erro' => $e->getMessage(), 'dados' => $dados_formulario], $empresa_id, 'Empresa');
+            $_SESSION['erros_criar_eleicao'] = ["Erro ao salvar a eleição no banco de dados. Por favor, tente novamente."];
+            // $_SESSION['erros_criar_eleicao'] = ["Erro ao salvar a eleição no banco de dados. Detalhe: " . $e->getMessage()]; // Para debug
             $_SESSION['dados_formulario_eleicao'] = $dados_formulario;
             header("Location: criar_eleicao.php");
             exit();
         }
     } else {
-        // Armazenar erros e dados do formulário na sessão e redirecionar
+        registrarLog($pdo, 'WARNING', 'CRIACAO_ELEICAO_FALHA_VALIDACAO', ['empresa_id' => $empresa_id, 'erros' => $erros, 'dados' => $dados_formulario], $empresa_id, 'Empresa');
         $_SESSION['erros_criar_eleicao'] = $erros;
         $_SESSION['dados_formulario_eleicao'] = $dados_formulario;
         header("Location: criar_eleicao.php");
@@ -120,7 +126,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 
 } else {
-    // Redirecionar se não for POST
+    registrarLog($pdo ?? null, 'INFO', 'ACESSO_INVALIDO_PROCESSO_CRIAR_ELEICAO', ['metodo_http' => $_SERVER["REQUEST_METHOD"]], $empresa_id ?? null, 'Empresa');
     header("Location: criar_eleicao.php");
     exit();
 }
