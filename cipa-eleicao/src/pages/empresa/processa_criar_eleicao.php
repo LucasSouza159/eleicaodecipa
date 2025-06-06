@@ -11,6 +11,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $titulo_eleicao = trim($dados_formulario['titulo_eleicao'] ?? '');
     $descricao = trim($dados_formulario['descricao'] ?? null);
     $ano_referencia = filter_var($dados_formulario['ano_referencia'] ?? '', FILTER_VALIDATE_INT, ["options" => ["min_range" => 2000, "max_range" => 2100]]);
+    $numero_titulares_previstos = filter_var($dados_formulario['numero_titulares_previstos'] ?? 0, FILTER_VALIDATE_INT, ["options" => ["min_range" => 0]]);
+    $numero_suplentes_previstos = filter_var($dados_formulario['numero_suplentes_previstos'] ?? 0, FILTER_VALIDATE_INT, ["options" => ["min_range" => 0]]);
     $filial_id = trim($dados_formulario['filial_id'] ?? '');
     $filial_id = empty($filial_id) ? null : filter_var($filial_id, FILTER_VALIDATE_INT);
 
@@ -26,6 +28,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Validações
     if (empty($titulo_eleicao)) $erros[] = "Título da Eleição é obrigatório.";
     if ($ano_referencia === false) $erros[] = "Ano de Referência inválido (deve ser entre 2000 e 2100).";
+    if ($numero_titulares_previstos === false) $erros[] = "Número de titulares previstos inválido (deve ser um número igual ou maior que zero).";
+    if ($numero_suplentes_previstos === false) $erros[] = "Número de suplentes previstos inválido (deve ser um número igual ou maior que zero).";
     if ($filial_id === false && !is_null($filial_id) && $dados_formulario['filial_id'] !== '') $erros[] = "ID da Filial inválido."; // Se fornecido, deve ser int
 
     // Validar datas obrigatórias
@@ -67,20 +71,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (empty($erros)) {
         try {
             $sql = "INSERT INTO eleicoes (empresa_id, filial_id, titulo_eleicao, descricao, ano_referencia,
+                                       numero_titulares_previstos, numero_suplentes_previstos,
                                        data_convocacao, data_inicio_inscricao_candidatos, data_fim_inscricao_candidatos,
                                        data_inicio_votacao, data_fim_votacao, data_apuracao, data_posse_eleitos,
                                        observacoes_gerais, status_eleicao)
                     VALUES (:empresa_id, :filial_id, :titulo_eleicao, :descricao, :ano_referencia,
+                            :numero_titulares, :numero_suplentes,
                             :data_convocacao, :data_inicio_inscricao, :data_fim_inscricao,
                             :data_inicio_votacao, :data_fim_votacao, :data_apuracao, :data_posse_eleitos,
                             :observacoes_gerais, 'Planejada')";
 
             $stmt = $pdo->prepare($sql);
             $stmt->bindParam(':empresa_id', $empresa_id, PDO::PARAM_INT);
-            $stmt->bindParam(':filial_id', $filial_id, PDO::PARAM_INT_OR_NULL); // Permite NULL
+            $stmt->bindParam(':filial_id', $filial_id, PDO::PARAM_INT_OR_NULL);
             $stmt->bindParam(':titulo_eleicao', $titulo_eleicao);
             $stmt->bindParam(':descricao', $descricao);
             $stmt->bindParam(':ano_referencia', $ano_referencia);
+            $stmt->bindParam(':numero_titulares', $numero_titulares_previstos, PDO::PARAM_INT);
+            $stmt->bindParam(':numero_suplentes', $numero_suplentes_previstos, PDO::PARAM_INT);
             $stmt->bindParam(':data_convocacao', $data_convocacao);
             $stmt->bindParam(':data_inicio_inscricao', $data_inicio_inscricao);
             $stmt->bindParam(':data_fim_inscricao', $data_fim_inscricao);

@@ -52,6 +52,8 @@ CREATE TABLE IF NOT EXISTS `eleicoes` (
         'Finalizada',
         'Cancelada'
     ) NOT NULL DEFAULT 'Planejada' COMMENT 'Status atual do processo eleitoral',
+    `numero_titulares_previstos` INT DEFAULT 0 COMMENT 'Número de membros titulares a serem eleitos',
+    `numero_suplentes_previstos` INT DEFAULT 0 COMMENT 'Número de membros suplentes a serem eleitos',
     `observacoes_gerais` TEXT NULL COMMENT 'Observações ou anotações gerais sobre a eleição',
     `data_criacao` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Data e hora de criação do registro da eleição',
     `data_atualizacao` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Data e hora da última atualização do registro da eleição',
@@ -66,6 +68,7 @@ CREATE TABLE IF NOT EXISTS `funcionarios` (
     `filial_id` INT NULL COMMENT 'ID da filial à qual o funcionário está alocado (opcional)',
     `nome_completo` VARCHAR(255) NOT NULL COMMENT 'Nome completo do funcionário',
     `cpf` VARCHAR(14) NOT NULL COMMENT 'CPF do funcionário (formato XXX.XXX.XXX-XX)',
+    `data_nascimento` DATE NULL COMMENT 'Data de nascimento do funcionário (para autenticação na votação)',
     `email` VARCHAR(255) NULL COMMENT 'Email do funcionário (opcional)',
     `matricula` VARCHAR(50) NULL COMMENT 'Número de matrícula do funcionário na empresa (opcional)',
     `data_admissao` DATE NOT NULL COMMENT 'Data de admissão do funcionário',
@@ -120,3 +123,37 @@ CREATE TABLE IF NOT EXISTS `candidatos` (
     UNIQUE KEY `uk_candidato_eleicao_funcionario` (`eleicao_id`, `funcionario_id`) COMMENT 'Garante que um funcionário não se candidate múltiplas vezes na mesma eleição',
     UNIQUE KEY `uk_candidato_eleicao_numero` (`eleicao_id`, `numero_candidato`) COMMENT 'Garante que o número do candidato seja único por eleição, se utilizado'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Tabela de candidatos por eleição';
+
+-- Tabela para registrar os votos
+CREATE TABLE IF NOT EXISTS `votos` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Identificador único do voto',
+    `eleicao_id` INT NOT NULL COMMENT 'ID da eleição em que o voto foi registrado',
+    `funcionario_id` INT NOT NULL COMMENT 'ID do funcionário que votou',
+    `candidato_id` INT NULL COMMENT 'ID do candidato que recebeu o voto (NULL para branco/nulo)',
+    `tipo_voto_especial` ENUM('Branco', 'Nulo') DEFAULT NULL COMMENT 'Diferencia voto em branco de nulo quando candidato_id é NULL',
+    `hash_voto` VARCHAR(255) NOT NULL COMMENT 'Hash representativo do voto para integridade e auditoria',
+    `ip_votante` VARCHAR(45) NULL COMMENT 'IP do dispositivo do votante',
+    `user_agent_votante` TEXT NULL COMMENT 'User agent do navegador do votante',
+    `data_hora_voto` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Momento exato do registro do voto',
+
+    FOREIGN KEY (`eleicao_id`) REFERENCES `eleicoes`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (`funcionario_id`) REFERENCES `funcionarios`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (`candidato_id`) REFERENCES `candidatos`(`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+
+    UNIQUE KEY `uk_voto_eleicao_funcionario` (`eleicao_id`, `funcionario_id`) COMMENT 'Garante que um funcionário vote apenas uma vez por eleição'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Tabela de registro de votos';
+
+-- Tabela para armazenar Atas e Documentos Gerados
+CREATE TABLE IF NOT EXISTS `atas` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Identificador único da ata/documento',
+    `eleicao_id` INT NOT NULL COMMENT 'ID da eleição à qual esta ata se refere',
+    `tipo_ata` ENUM('Convocacao', 'InstalacaoPosse', 'ResultadoEleicao', 'ListaVotantes', 'Outra') NOT NULL COMMENT 'Tipo do documento gerado',
+    `titulo_documento` VARCHAR(255) NOT NULL COMMENT 'Título descritivo do documento/ata',
+    `conteudo_ata` TEXT NULL COMMENT 'Conteúdo HTML ou resumo da ata (opcional)',
+    `gerada_por_usuario_id` INT NULL COMMENT 'ID do usuário (comissão/empresa) que gerou o documento (referência futura)',
+    `data_geracao` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Data e hora da geração do documento',
+    `nome_arquivo_fisico` VARCHAR(255) NULL COMMENT 'Nome do arquivo PDF salvo no servidor (se aplicável)',
+
+    FOREIGN KEY (`eleicao_id`) REFERENCES `eleicoes`(`id`) ON DELETE CASCADE ON UPDATE CASCADE
+    -- FOREIGN KEY (`gerada_por_usuario_id`) REFERENCES `usuarios_sistema`(`id`) ON DELETE SET NULL ON UPDATE CASCADE; -- Exemplo se houver tabela de usuários do sistema
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Tabela para Atas e Documentos Gerados do Processo Eleitoral';

@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Estilos globais personalizados opcionais aqui */
+body {
+  @apply font-sans; /* Aplica a fonte definida em tailwind.config.js (Inter) */
+  @apply text-gray-800; /* Define a cor de texto padrão para um cinza escuro, bom para leitura */
+  @apply antialiased; /* Melhora a renderização da fonte */
+}
+
+h1, h2, h3, h4, h5, h6 {
+  @apply text-cinza-chumbo; /* Cor personalizada para títulos */
+}
+
+/* Estilo para links globais, se desejar um padrão */
+/* a {
+  @apply text-roxo-principal hover:text-purple-700 transition-colors duration-300;
+} */
+
+.button-primary {
+  @apply bg-roxo-principal hover:bg-purple-700 text-white font-bold py-2 px-4 rounded shadow-md transition duration-300 ease-in-out;
+}
+
+.button-secondary {
+  @apply bg-azul-cipa hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow-md transition duration-300 ease-in-out;
+}
+
+.button-success {
+  @apply bg-verde-cipa hover:bg-green-700 text-white font-bold py-2 px-4 rounded shadow-md transition duration-300 ease-in-out;
+}
+
+.button-danger {
+  @apply bg-erro-cipa hover:bg-red-700 text-white font-bold py-2 px-4 rounded shadow-md transition duration-300 ease-in-out;
+}
+
+.button-warning {
+  @apply bg-alerta-cipa hover:bg-yellow-600 text-cinza-chumbo font-bold py-2 px-4 rounded shadow-md transition duration-300 ease-in-out;
+}
+
+/* Ajustes para formulários, caso não use o plugin @tailwindcss/forms */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+input[type="datetime-local"],
+textarea,
+select {
+  @apply border-gray-300 rounded-md shadow-sm focus:border-roxo-principal focus:ring focus:ring-roxo-principal focus:ring-opacity-50;
+  @apply p-2; /* Adiciona padding padrão */
+}
+
+input[type="checkbox"], input[type="radio"] {
+  @apply rounded text-roxo-principal focus:ring-roxo-principal;
+}

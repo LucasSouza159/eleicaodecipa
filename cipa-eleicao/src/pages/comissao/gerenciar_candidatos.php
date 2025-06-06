@@ -1,12 +1,11 @@
 <?php
-require_once '../../scripts/auth_comissao.php'; // Garante autenticação e define $comissao_eleicao_id_logado
+require_once '../../scripts/auth_comissao.php';
 require_once '../../scripts/db_connection.php';
 
-$eleicao_id = $comissao_eleicao_id_logado; // Definido em auth_comissao.php
-$eleicao_titulo = $comissao_eleicao_titulo_logado; // Definido em auth_comissao.php
-$ano_referencia = ''; // Pode ser buscado se necessário
+$eleicao_id = $comissao_eleicao_id_logado;
+$eleicao_titulo = $comissao_eleicao_titulo_logado;
+$ano_referencia = '';
 
-// Buscar detalhes adicionais da eleição, como ano de referência
 try {
     $stmt_eleicao_info = $pdo->prepare("SELECT ano_referencia FROM eleicoes WHERE id = ?");
     $stmt_eleicao_info->execute([$eleicao_id]);
@@ -16,9 +15,7 @@ try {
     }
 } catch (PDOException $e) {
     error_log("Erro ao buscar ano da eleição: " . $e->getMessage());
-    // Não é crítico para a funcionalidade principal da página
 }
-
 
 $candidatos = [];
 try {
@@ -36,10 +33,15 @@ try {
     $erro_db_candidatos = "Não foi possível carregar os candidatos. Tente novamente mais tarde.";
 }
 
-// Para repopular formulário em caso de erro
 $erros_inscricao = $_SESSION['erros_inscrever_candidato'] ?? [];
 $dados_formulario_candidato = $_SESSION['dados_formulario_candidato'] ?? [];
 unset($_SESSION['erros_inscrever_candidato'], $_SESSION['dados_formulario_candidato']);
+
+// Unificar mensagens de erro e sucesso
+$mensagem_sucesso = $_SESSION['mensagem_sucesso_candidato'] ?? null;
+unset($_SESSION['mensagem_sucesso_candidato']);
+$mensagem_erro = $_SESSION['mensagem_erro_candidato'] ?? null;
+unset($_SESSION['mensagem_erro_candidato']);
 
 ?>
 <!DOCTYPE html>
@@ -47,121 +49,148 @@ unset($_SESSION['erros_inscrever_candidato'], $_SESSION['dados_formulario_candid
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerenciar Candidatos - Comissão</title>
-    <style>
-        body { font-family: sans-serif; margin: 0; background-color: #f8f9fa; }
-        .container { width: 90%; margin: 20px auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        h2, h3, h4 { color: #333; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; margin-bottom: 30px; }
-        th, td { border: 1px solid #dee2e6; padding: 10px; text-align: left; font-size: 0.9em; }
-        th { background-color: #e9ecef; }
-        .mensagem { padding: 10px; margin-bottom: 15px; border-radius: 5px; text-align:center; }
-        .sucesso { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .erro { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .acoes a { margin-right: 8px; text-decoration: none; padding: 5px 8px; border-radius:4px; font-size:0.85em; }
-        .acoes a.editar { background-color: #ffc107; color:black; }
-        .acoes a.status { background-color: #17a2b8; color:white; } /* Placeholder */
-        .form-secao { margin-top: 30px; padding: 20px; border: 1px solid #ccc; border-radius: 5px; background-color: #fdfdfd; }
-        .form-secao h4 { margin-top: 0; }
-        .form-group { margin-bottom: 12px; }
-        .form-group label { display: block; margin-bottom: 4px; font-weight: bold; }
-        .form-group input[type="text"],
-        .form-group input[type="number"],
-        .form-group textarea,
-        .form-group select { width: 100%; padding: 8px; box-sizing: border-box; border:1px solid #ced4da; border-radius:4px; }
-        .form-group textarea { min-height: 80px; }
-        .button { padding:10px 15px; background-color:#007bff; color:white; border:none; border-radius:4px; cursor:pointer; font-size: 1em; }
-        .button:hover { background-color:#0056b3; }
-        .erro-lista { list-style-type: none; padding: 0; margin: 0 0 10px 0; color: #721c24; }
-        .nav-link { color: #007bff; text-decoration:none; margin-bottom:15px; display:inline-block;}
-    </style>
+    <title>Gerenciar Candidatos - CIPA Fácil</title>
+    <link href="../../src/styles/output.css" rel="stylesheet">
 </head>
-<body>
-    <div class="container">
-        <h2>Gerenciar Candidaturas</h2>
-        <a href="painel_comissao.php" class="nav-link">Voltar ao Painel da Comissão</a>
+<body class="bg-gray-100 font-sans">
 
-        <div class="election-info">
-            <h3>Eleição: <?php echo htmlspecialchars($eleicao_titulo); ?> (<?php echo htmlspecialchars($ano_referencia); ?>)</h3>
+    <nav class="bg-azul-cipa text-white shadow-lg">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center py-4">
+                <div class="text-xl font-bold">
+                    Comissão: <?php echo htmlspecialchars($eleicao_titulo); ?>
+                </div>
+                 <div>
+                    <span class="text-sm mr-4"><?php echo htmlspecialchars($comissao_nome_membro_logado . " - " . $comissao_papel_logado); ?></span>
+                    <a href="logout_comissao.php" class="px-4 py-2 bg-red-500 hover:bg-red-600 rounded-md text-sm font-medium transition-colors">Sair</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto p-6 mt-8">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-semibold text-cinza-chumbo">Gerenciar Candidaturas</h2>
+            <a href="painel_comissao.php" class="text-azul-cipa hover:text-blue-700">&larr; Voltar ao Painel da Comissão</a>
         </div>
 
+        <p class="mb-6 text-gray-700">Eleição: <strong><?php echo htmlspecialchars($eleicao_titulo); ?></strong> (Ano: <?php echo htmlspecialchars($ano_referencia); ?>)</p>
+
         <?php
-        if (isset($_SESSION['mensagem_sucesso_candidato'])) {
-            echo "<div class='mensagem sucesso'>" . htmlspecialchars($_SESSION['mensagem_sucesso_candidato']) . "</div>";
-            unset($_SESSION['mensagem_sucesso_candidato']);
+        if ($mensagem_sucesso) {
+            echo "<div class='p-4 mb-4 text-sm text-green-700 bg-green-100 border border-green-400 rounded-lg' role='alert'>" . htmlspecialchars($mensagem_sucesso) . "</div>";
         }
-        if (isset($erro_db_candidatos)) { // Erro ao buscar lista de candidatos
-            echo "<div class='mensagem erro'>" . htmlspecialchars($erro_db_candidatos) . "</div>";
+        if ($mensagem_erro) {
+            echo "<div class='p-4 mb-4 text-sm text-red-700 bg-red-100 border border-red-400 rounded-lg' role='alert'>" . htmlspecialchars($mensagem_erro) . "</div>";
+        }
+        if (isset($erro_db_candidatos)) {
+            echo "<div class='p-4 mb-4 text-sm text-red-700 bg-red-100 border border-red-400 rounded-lg' role='alert'>" . htmlspecialchars($erro_db_candidatos) . "</div>";
         }
         ?>
 
-        <h4>Candidatos Inscritos</h4>
-        <?php if (empty($candidatos) && !isset($erro_db_candidatos)): ?>
-            <p>Nenhum candidato inscrito para esta eleição até o momento.</p>
-        <?php elseif (!empty($candidatos)): ?>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Nome do Funcionário</th>
-                        <th>Nº Candidato</th>
-                        <th>Nome na Urna</th>
-                        <th>Status</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($candidatos as $candidato): ?>
-                        <tr>
-                            <td><?php echo htmlspecialchars($candidato['funcionario_nome']); ?></td>
-                            <td><?php echo htmlspecialchars($candidato['numero_candidato'] ?? 'N/D'); ?></td>
-                            <td><?php echo htmlspecialchars($candidato['nome_urna'] ?? 'N/D'); ?></td>
-                            <td><?php echo htmlspecialchars($candidato['status_candidatura']); ?></td>
-                            <td class="acoes">
-                                <a href="editar_candidatura.php?candidato_id=<?php echo $candidato['candidato_id']; ?>" class="editar">Editar</a>
-                                <!-- TODO: Implementar alteração de status -->
-                                <a href="alterar_status_candidato.php?candidato_id=<?php echo $candidato['candidato_id']; ?>" class="status">Alterar Status</a>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        <?php endif; ?>
-
-        <div class="form-secao">
-            <h4>Inscrever Novo Candidato</h4>
-            <?php if (!empty($erros_inscricao)): ?>
-                <ul class="erro-lista">
-                    <?php foreach ($erros_inscricao as $erro): ?>
-                        <li><?php echo htmlspecialchars($erro); ?></li>
-                    <?php endforeach; ?>
-                </ul>
+        <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+            <h3 class="text-xl font-semibold text-azul-cipa mb-4">Candidatos Inscritos</h3>
+            <?php if (empty($candidatos) && !isset($erro_db_candidatos)): ?>
+                <p class="text-gray-600">Nenhum candidato inscrito para esta eleição até o momento.</p>
+            <?php elseif (!empty($candidatos)): ?>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full leading-normal">
+                        <thead>
+                            <tr>
+                                <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Funcionário</th>
+                                <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nº</th>
+                                <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nome na Urna</th>
+                                <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                                <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($candidatos as $candidato): ?>
+                                <tr>
+                                    <td class="px-5 py-4 border-b border-gray-200 bg-white text-sm"><p class="text-gray-900 whitespace-no-wrap"><?php echo htmlspecialchars($candidato['funcionario_nome']); ?></p></td>
+                                    <td class="px-5 py-4 border-b border-gray-200 bg-white text-sm"><p class="text-gray-900 whitespace-no-wrap"><?php echo htmlspecialchars($candidato['numero_candidato'] ?? 'N/D'); ?></p></td>
+                                    <td class="px-5 py-4 border-b border-gray-200 bg-white text-sm"><p class="text-gray-900 whitespace-no-wrap"><?php echo htmlspecialchars($candidato['nome_urna'] ?? 'N/D'); ?></p></td>
+                                    <td class="px-5 py-4 border-b border-gray-200 bg-white text-sm">
+                                        <span class="px-2 py-1 font-semibold leading-tight rounded-full text-xs
+                                            <?php
+                                                switch ($candidato['status_candidatura']) {
+                                                    case 'Inscrito': echo 'text-blue-700 bg-blue-100'; break;
+                                                    case 'Aprovado': echo 'text-green-700 bg-green-100'; break;
+                                                    case 'Reprovado': echo 'text-red-700 bg-red-100'; break;
+                                                    case 'Eleito': echo 'text-purple-700 bg-purple-100'; break;
+                                                    case 'Suplente': echo 'text-yellow-700 bg-yellow-100'; break;
+                                                    default: echo 'text-gray-700 bg-gray-100';
+                                                }
+                                            ?>">
+                                            <?php echo htmlspecialchars($candidato['status_candidatura']); ?>
+                                        </span>
+                                    </td>
+                                    <td class="px-5 py-4 border-b border-gray-200 bg-white text-sm whitespace-no-wrap">
+                                        <a href="editar_candidatura.php?candidato_id=<?php echo $candidato['candidato_id']; ?>" class="px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded-md text-xs font-medium transition-colors">Editar</a>
+                                        <?php if ($candidato['status_candidatura'] == 'Inscrito'): ?>
+                                            <a href="processa_alterar_status_candidato.php?candidato_id=<?php echo $candidato['candidato_id']; ?>&novo_status=Aprovado" class="ml-2 px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-md text-xs font-medium transition-colors" onclick="return confirm('Aprovar candidatura?');">Aprovar</a>
+                                            <a href="processa_alterar_status_candidato.php?candidato_id=<?php echo $candidato['candidato_id']; ?>&novo_status=Reprovado" class="ml-2 px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded-md text-xs font-medium transition-colors" onclick="return confirm('Reprovar candidatura?');">Reprovar</a>
+                                        <?php elseif (in_array($candidato['status_candidatura'], ['Aprovado', 'Reprovado'])): ?>
+                                            <a href="processa_alterar_status_candidato.php?candidato_id=<?php echo $candidato['candidato_id']; ?>&novo_status=Inscrito" class="ml-2 px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white rounded-md text-xs font-medium transition-colors" onclick="return confirm('Reverter para Inscrito?');">P/ Inscrito</a>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
             <?php endif; ?>
-            <form action="processa_inscrever_candidato.php" method="POST">
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h3 class="text-xl font-semibold text-azul-cipa mb-4">Inscrever Novo Candidato</h3>
+            <?php if (!empty($erros_inscricao)): ?>
+                <div class="p-4 mb-4 text-sm text-red-700 bg-red-100 border border-red-400 rounded-lg" role="alert">
+                    <ul class="list-disc pl-5">
+                        <?php foreach ($erros_inscricao as $erro): ?>
+                            <li><?php echo htmlspecialchars($erro); ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            <?php endif; ?>
+            <form action="processa_inscrever_candidato.php" method="POST" class="space-y-4">
                 <input type="hidden" name="eleicao_id" value="<?php echo $eleicao_id; ?>">
 
-                <div class="form-group">
-                    <label for="funcionario_id">ID do Funcionário:</label>
-                    <input type="number" id="funcionario_id" name="funcionario_id" value="<?php echo htmlspecialchars($dados_formulario_candidato['funcionario_id'] ?? ''); ?>" required>
-                    <small>//TODO: Implementar busca/dropdown dinâmico de funcionários aptos.</small>
+                <div>
+                    <label for="funcionario_id" class="block text-sm font-medium text-gray-700">ID do Funcionário:</label>
+                    <input type="number" id="funcionario_id" name="funcionario_id" value="<?php echo htmlspecialchars($dados_formulario_candidato['funcionario_id'] ?? ''); ?>" required
+                           class="mt-1 block w-full md:w-1/2 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-azul-cipa focus:border-azul-cipa">
+                    <p class="text-xs text-gray-500 mt-1">//TODO: Implementar busca/dropdown dinâmico de funcionários aptos.</p>
                 </div>
 
-                <div class="form-group">
-                    <label for="numero_candidato">Número do Candidato (opcional):</label>
-                    <input type="number" id="numero_candidato" name="numero_candidato" value="<?php echo htmlspecialchars($dados_formulario_candidato['numero_candidato'] ?? ''); ?>">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="numero_candidato" class="block text-sm font-medium text-gray-700">Número do Candidato (opcional):</label>
+                        <input type="number" id="numero_candidato" name="numero_candidato" value="<?php echo htmlspecialchars($dados_formulario_candidato['numero_candidato'] ?? ''); ?>"
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-azul-cipa focus:border-azul-cipa">
+                    </div>
+                    <div>
+                        <label for="nome_urna" class="block text-sm font-medium text-gray-700">Nome na Urna (opcional):</label>
+                        <input type="text" id="nome_urna" name="nome_urna" value="<?php echo htmlspecialchars($dados_formulario_candidato['nome_urna'] ?? ''); ?>"
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-azul-cipa focus:border-azul-cipa">
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="nome_urna">Nome na Urna (opcional):</label>
-                    <input type="text" id="nome_urna" name="nome_urna" value="<?php echo htmlspecialchars($dados_formulario_candidato['nome_urna'] ?? ''); ?>">
+                <div>
+                    <label for="plataforma_propostas" class="block text-sm font-medium text-gray-700">Plataforma/Propostas (opcional):</label>
+                    <textarea id="plataforma_propostas" name="plataforma_propostas" rows="3"
+                              class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-azul-cipa focus:border-azul-cipa"><?php echo htmlspecialchars($dados_formulario_candidato['plataforma_propostas'] ?? ''); ?></textarea>
                 </div>
-
-                <div class="form-group">
-                    <label for="plataforma_propostas">Plataforma/Propostas (opcional):</label>
-                    <textarea id="plataforma_propostas" name="plataforma_propostas"><?php echo htmlspecialchars($dados_formulario_candidato['plataforma_propostas'] ?? ''); ?></textarea>
+                <div>
+                    <button type="submit" class="w-full md:w-auto px-6 py-2 bg-azul-cipa hover:bg-blue-700 text-white font-bold rounded-md shadow-md transition-colors">
+                        Inscrever Candidato
+                    </button>
                 </div>
-                <button type="submit" class="button">Inscrever Candidato</button>
             </form>
         </div>
-    </div>
+    </main>
+    <footer class="text-center p-4 mt-8 text-sm text-gray-500">
+        &copy; <?php echo date("Y"); ?> CIPA Fácil Online.
+    </footer>
 </body>
 </html>

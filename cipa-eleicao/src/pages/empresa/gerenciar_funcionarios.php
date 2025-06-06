@@ -26,81 +26,102 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerenciar Funcionários - Painel da Empresa</title>
-    <style>
-        body { font-family: sans-serif; }
-        .container { width: 95%; margin: auto; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 0.9em; }
-        th { background-color: #f2f2f2; }
-        .mensagem { padding: 10px; margin-bottom: 15px; border-radius: 5px; }
-        .sucesso { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .erro { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .acoes a { margin-right: 5px; text-decoration: none; padding: 3px 6px; border-radius:3px; font-size:0.85em;}
-        .acoes a.editar { background-color: #ffc107; color:black;}
-        .acoes a.detalhes { background-color: #17a2b8; color:white;}
-        .button-group { margin-bottom: 15px;}
-        .button-group a, .button-group button { text-decoration:none; padding: 8px 12px; border-radius:4px; border: 1px solid #ccc; margin-right:5px; background-color:#007bff; color:white;}
-        .button-group button.import { background-color: #28a745;}
-    </style>
+    <title>Gerenciar Funcionários - CIPA Fácil</title>
+    <link href="../../src/styles/output.css" rel="stylesheet">
 </head>
-<body>
-    <div class="container">
-        <h2>Gerenciar Funcionários</h2>
-        <p><a href="painel_empresa.php">Voltar ao Painel</a></p>
+<body class="bg-gray-100 font-sans">
 
-        <div class="button-group">
-            <a href="cadastrar_funcionario.php">Cadastrar Novo Funcionário</a>
-            <button type="button" class="import" onclick="alert('Funcionalidade de Importar CSV será implementada em breve.');">Importar CSV</button>
+    <!-- Navbar do Painel -->
+    <nav class="bg-roxo-principal text-white shadow-lg">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center py-4">
+                <div class="text-xl font-bold">
+                    Painel da Empresa: <?php echo htmlspecialchars($_SESSION['empresa_nome_fantasia'] ?? 'Empresa'); ?>
+                </div>
+                <div>
+                    <a href="logout_empresa.php" class="px-4 py-2 bg-red-500 hover:bg-red-600 rounded-md text-sm font-medium transition-colors">Sair</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto p-6 mt-8">
+        <div class="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
+            <h2 class="text-2xl font-semibold text-cinza-chumbo">Gerenciar Funcionários</h2>
+            <div class="flex flex-col md:flex-row gap-2">
+                <a href="painel_empresa.php" class="text-roxo-principal hover:text-purple-700 self-start md:self-center md:mr-4">&larr; Voltar ao Painel</a>
+                <a href="cadastrar_funcionario.php"
+                   class="bg-verde-cipa hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md shadow-md transition-colors text-center">
+                    + Cadastrar Novo Funcionário
+                </a>
+                <button type="button"
+                        onclick="alert('Funcionalidade de Importar CSV será implementada em breve.');"
+                        class="bg-azul-cipa hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md shadow-md transition-colors">
+                    Importar CSV
+                </button>
+            </div>
         </div>
 
         <?php
         if (isset($_SESSION['mensagem_sucesso'])) {
-            echo "<div class='mensagem sucesso'>" . htmlspecialchars($_SESSION['mensagem_sucesso']) . "</div>";
+            echo "<div class='p-4 mb-4 text-sm text-green-700 bg-green-100 border border-green-400 rounded-lg' role='alert'>" . htmlspecialchars($_SESSION['mensagem_sucesso']) . "</div>";
             unset($_SESSION['mensagem_sucesso']);
         }
         if (isset($_SESSION['mensagem_erro'])) {
-            echo "<div class='mensagem erro'>" . htmlspecialchars($_SESSION['mensagem_erro']) . "</div>";
+            echo "<div class='p-4 mb-4 text-sm text-red-700 bg-red-100 border border-red-400 rounded-lg' role='alert'>" . htmlspecialchars($_SESSION['mensagem_erro']) . "</div>";
             unset($_SESSION['mensagem_erro']);
         }
         if (isset($erro_db)) {
-            echo "<div class='mensagem erro'>" . htmlspecialchars($erro_db) . "</div>";
+            echo "<div class='p-4 mb-4 text-sm text-red-700 bg-red-100 border border-red-400 rounded-lg' role='alert'>" . htmlspecialchars($erro_db) . "</div>";
         }
         ?>
 
         <?php if (empty($funcionarios) && !isset($erro_db)): ?>
-            <p>Nenhum funcionário cadastrado para esta empresa.</p>
+            <div class="bg-white p-6 rounded-lg shadow text-center">
+                <p class="text-gray-600 text-lg">Nenhum funcionário cadastrado para esta empresa.</p>
+                <p class="mt-2">Clique em "Cadastrar Novo Funcionário" ou "Importar CSV" para começar.</p>
+            </div>
         <?php elseif (!empty($funcionarios)): ?>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Nome Completo</th>
-                        <th>CPF</th>
-                        <th>Email</th>
-                        <th>Matrícula</th>
-                        <th>Data de Admissão</th>
-                        <th>Status</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($funcionarios as $funcionario): ?>
+            <div class="bg-white shadow-md rounded-lg overflow-x-auto">
+                <table class="min-w-full leading-normal">
+                    <thead>
                         <tr>
-                            <td><?php echo htmlspecialchars($funcionario['nome_completo']); ?></td>
-                            <td><?php echo htmlspecialchars($funcionario['cpf']); ?></td>
-                            <td><?php echo htmlspecialchars($funcionario['email'] ?? 'N/A'); ?></td>
-                            <td><?php echo htmlspecialchars($funcionario['matricula'] ?? 'N/A'); ?></td>
-                            <td><?php echo htmlspecialchars(date('d/m/Y', strtotime($funcionario['data_admissao']))); ?></td>
-                            <td><?php echo htmlspecialchars($funcionario['status_funcionario']); ?></td>
-                            <td class="acoes">
-                                <a href="editar_funcionario.php?id=<?php echo $funcionario['id']; ?>" class="editar">Editar</a>
-                                <!-- <a href="ver_detalhes_funcionario.php?id=<?php echo $funcionario['id']; ?>" class="detalhes">Detalhes</a> -->
-                            </td>
+                            <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nome Completo</th>
+                            <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">CPF</th>
+                            <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Email</th>
+                            <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Matrícula</th>
+                            <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Data Admissão</th>
+                            <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                            <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Ações</th>
                         </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($funcionarios as $funcionario): ?>
+                            <tr>
+                                <td class="px-5 py-4 border-b border-gray-200 bg-white text-sm"><p class="text-gray-900 whitespace-no-wrap"><?php echo htmlspecialchars($funcionario['nome_completo']); ?></p></td>
+                                <td class="px-5 py-4 border-b border-gray-200 bg-white text-sm"><p class="text-gray-900 whitespace-no-wrap"><?php echo htmlspecialchars($funcionario['cpf']); ?></p></td>
+                                <td class="px-5 py-4 border-b border-gray-200 bg-white text-sm"><p class="text-gray-900 whitespace-no-wrap"><?php echo htmlspecialchars($funcionario['email'] ?? 'N/A'); ?></p></td>
+                                <td class="px-5 py-4 border-b border-gray-200 bg-white text-sm"><p class="text-gray-900 whitespace-no-wrap"><?php echo htmlspecialchars($funcionario['matricula'] ?? 'N/A'); ?></p></td>
+                                <td class="px-5 py-4 border-b border-gray-200 bg-white text-sm"><p class="text-gray-900 whitespace-no-wrap"><?php echo htmlspecialchars(date('d/m/Y', strtotime($funcionario['data_admissao']))); ?></p></td>
+                                <td class="px-5 py-4 border-b border-gray-200 bg-white text-sm">
+                                    <span class="relative inline-block px-3 py-1 font-semibold <?php echo $funcionario['status_funcionario'] === 'Ativo' ? 'text-green-900' : 'text-red-900'; ?> leading-tight">
+                                        <span aria-hidden class="absolute inset-0 <?php echo $funcionario['status_funcionario'] === 'Ativo' ? 'bg-green-200' : 'bg-red-200'; ?> opacity-50 rounded-full"></span>
+                                        <span class="relative"><?php echo htmlspecialchars($funcionario['status_funcionario']); ?></span>
+                                    </span>
+                                </td>
+                                <td class="px-5 py-4 border-b border-gray-200 bg-white text-sm">
+                                    <a href="editar_funcionario.php?id=<?php echo $funcionario['id']; ?>" class="text-xs px-2 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded-md transition-colors">Editar</a>
+                                    <!-- <a href="ver_detalhes_funcionario.php?id=<?php echo $funcionario['id']; ?>" class="text-blue-600 hover:text-blue-800">Detalhes</a> -->
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
         <?php endif; ?>
-    </div>
+    </main>
+    <footer class="text-center p-4 mt-8 text-sm text-gray-500">
+        &copy; <?php echo date("Y"); ?> CIPA Fácil Online.
+    </footer>
 </body>
 </html>

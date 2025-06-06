@@ -1,2 +1,22 @@
 {
+  "name": "cipa-facil/cipa-eleicao-online",
+  "description": "Sistema de Eleição CIPA Online em conformidade com a NR-05.",
+  "type": "project",
+  "license": "proprietary",
+  "authors": [
+    {
+      "name": "Seu Nome ou Nome da Empresa",
+      "email": "contato@suaempresa.com"
+    }
+  ],
+  "require": {
+    "php": ">=7.4"
+  },
+  "scripts": {
+    "build-css": "npx tailwindcss -i ./src/styles/main.css -o ./src/styles/output.css",
+    "watch-css": "npx tailwindcss -i ./src/styles/main.css -o ./src/styles/output.css --watch",
+    "prod-css": "npx tailwindcss -i ./src/styles/main.css -o ./src/styles/output.css --minify"
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true
 }

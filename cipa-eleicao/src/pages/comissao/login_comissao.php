@@ -6,52 +6,60 @@ session_start();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login da Comissão Eleitoral</title>
+    <title>Login da Comissão Eleitoral - CIPA Fácil</title>
+    <link href="../../src/styles/output.css" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f4f4f4; }
-        .login-container { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); width: 300px; }
-        .login-container h2 { text-align: center; margin-bottom: 20px; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; }
-        .form-group input { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
-        .button { width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        .button:hover { background-color: #0056b3; }
-        .mensagem { padding: 10px; margin-bottom: 15px; border-radius: 5px; text-align:center; }
-        .erro { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .sucesso { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .footer-link { text-align: center; margin-top: 15px; font-size: 0.9em; }
-        .footer-link a { color: #007bff; text-decoration: none; }
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
     </style>
 </head>
-<body>
-    <div class="login-container">
-        <h2>Comissão Eleitoral</h2>
+<body class="bg-gray-100 flex flex-col items-center justify-center font-sans">
+
+    <div class="w-full max-w-md p-8 space-y-6 bg-white shadow-xl rounded-lg">
+        <div class="text-center">
+            <h1 class="text-3xl font-bold text-roxo-principal">CIPA Fácil</h1>
+            <h2 class="text-2xl font-semibold text-cinza-chumbo mt-2">Login da Comissão Eleitoral</h2>
+        </div>
 
         <?php
         if (isset($_SESSION['erro_login_comissao'])) {
-            echo "<div class='mensagem erro'>" . htmlspecialchars($_SESSION['erro_login_comissao']) . "</div>";
+            echo "<div class='p-4 mb-4 text-sm text-red-700 bg-red-100 border border-red-400 rounded-lg' role='alert'>" . htmlspecialchars($_SESSION['erro_login_comissao']) . "</div>";
             unset($_SESSION['erro_login_comissao']);
         }
         if (isset($_SESSION['mensagem_logout_comissao'])) {
-            echo "<div class='mensagem sucesso'>" . htmlspecialchars($_SESSION['mensagem_logout_comissao']) . "</div>";
+            echo "<div class='p-4 mb-4 text-sm text-green-700 bg-green-100 border border-green-400 rounded-lg' role='alert'>" . htmlspecialchars($_SESSION['mensagem_logout_comissao']) . "</div>";
             unset($_SESSION['mensagem_logout_comissao']);
+        }
+         if (isset($_SESSION['erro_acesso_comissao'])) { // Vindo de auth_comissao.php
+            echo "<div class='p-4 mb-4 text-sm text-yellow-700 bg-yellow-100 border border-yellow-400 rounded-lg' role='alert'>" . htmlspecialchars($_SESSION['erro_acesso_comissao']) . "</div>";
+            unset($_SESSION['erro_acesso_comissao']);
         }
         ?>
 
-        <form action="processa_login_comissao.php" method="POST">
-            <div class="form-group">
-                <label for="email">Email:</label>
-                <input type="email" id="email" name="email" required value="<?php echo htmlspecialchars($_SESSION['login_comissao_email_tentativa'] ?? ''); ?>">
+        <form action="processa_login_comissao.php" method="POST" class="space-y-6">
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-700">Email:</label>
+                <input type="email" id="email" name="email" required
+                       value="<?php echo htmlspecialchars($_SESSION['login_comissao_email_tentativa'] ?? ''); ?>"
+                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-roxo-principal focus:border-roxo-principal sm:text-sm"
+                       placeholder="seu.email@comissao.com">
             </div>
-            <div class="form-group">
-                <label for="senha">Senha:</label>
-                <input type="password" id="senha" name="senha" required>
+            <div>
+                <label for="senha" class="block text-sm font-medium text-gray-700">Senha:</label>
+                <input type="password" id="senha" name="senha" required
+                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-roxo-principal focus:border-roxo-principal sm:text-sm"
+                       placeholder="Sua senha">
             </div>
-            <button type="submit" class="button">Entrar</button>
+            <button type="submit"
+                    class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-roxo-principal hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-roxo-principal">
+                Entrar
+            </button>
         </form>
-        <div class="footer-link">
-            <p><a href="../empresa/login_empresa.php">Acessar como Empresa</a></p>
-            <p><a href="../../index.php">Página Inicial</a></p>
+        <div class="text-sm text-center">
+            <p><a href="../empresa/login_empresa.php" class="font-medium text-gray-600 hover:text-roxo-principal">Acessar como Empresa</a></p>
+            <p class="mt-2"><a href="../../index.php" class="font-medium text-gray-600 hover:text-roxo-principal">&larr; Voltar à Página Inicial</a></p>
         </div>
     </div>
     <?php unset($_SESSION['login_comissao_email_tentativa']); ?>

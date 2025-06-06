@@ -34,6 +34,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     $nome_completo = trim($dados_formulario['nome_completo'] ?? '');
     $cpf = trim($dados_formulario['cpf'] ?? '');
+    $data_nascimento_raw = trim($dados_formulario['data_nascimento'] ?? '');
+    $data_nascimento = empty($data_nascimento_raw) ? null : $data_nascimento_raw;
     $email = trim($dados_formulario['email'] ?? null);
     $email = empty($email) ? null : $email;
     $matricula = trim($dados_formulario['matricula'] ?? null);
@@ -51,12 +53,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Validações (similares ao cadastro)
     if (empty($nome_completo)) $erros[] = "Nome completo é obrigatório.";
     if (empty($cpf)) $erros[] = "CPF é obrigatório.";
+
+    if ($data_nascimento !== null) {
+        $dn = DateTime::createFromFormat('Y-m-d', $data_nascimento);
+        if (!($dn && $dn->format('Y-m-d') === $data_nascimento)) {
+            $erros[] = "Formato de Data de Nascimento inválido. Use AAAA-MM-DD.";
+        }
+    }
+
     if (!empty($email) && !filter_var($email, FILTER_VALIDATE_EMAIL)) $erros[] = "Formato de email inválido.";
     if (empty($data_admissao)) {
         $erros[] = "Data de admissão é obrigatória.";
     } else {
-        $d = DateTime::createFromFormat('Y-m-d', $data_admissao);
-        if (!($d && $d->format('Y-m-d') === $data_admissao)) {
+        $da = DateTime::createFromFormat('Y-m-d', $data_admissao);
+        if (!($da && $da->format('Y-m-d') === $data_admissao)) {
             $erros[] = "Formato de data de admissão inválido. Use AAAA-MM-DD.";
         }
     }
@@ -103,6 +113,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $sql = "UPDATE funcionarios SET
                         nome_completo = :nome_completo,
                         cpf = :cpf,
+                        data_nascimento = :data_nascimento,
                         email = :email,
                         matricula = :matricula,
                         data_admissao = :data_admissao,
@@ -117,6 +128,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $stmt_update->execute([
                 ':nome_completo' => $nome_completo,
                 ':cpf' => $cpf,
+                ':data_nascimento' => $data_nascimento,
                 ':email' => $email,
                 ':matricula' => $matricula,
                 ':data_admissao' => $data_admissao,

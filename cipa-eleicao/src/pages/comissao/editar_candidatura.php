@@ -1,5 +1,5 @@
 <?php
-require_once '../../scripts/auth_comissao.php'; // Garante autenticação e define $comissao_eleicao_id_logado
+require_once '../../scripts/auth_comissao.php';
 require_once '../../scripts/db_connection.php';
 
 $eleicao_id_comissao = $comissao_eleicao_id_logado;
@@ -8,18 +8,15 @@ $candidatura = null;
 $funcionario_info = null;
 
 if (!$candidato_id) {
-    $_SESSION['mensagem_erro_candidato'] = "ID da candidatura inválido."; // Usar uma chave de sessão diferente para evitar conflitos
+    $_SESSION['mensagem_erro_candidato'] = "ID da candidatura inválido.";
     header("Location: gerenciar_candidatos.php");
     exit();
 }
 
-// Recuperar dados do formulário e erros da sessão, se existirem
 $erros_editar_candidatura = $_SESSION['erros_editar_candidatura'] ?? [];
 $dados_formulario_edicao_candidato = $_SESSION['dados_formulario_edicao_candidato'] ?? [];
 unset($_SESSION['erros_editar_candidatura'], $_SESSION['dados_formulario_edicao_candidato']);
 
-
-// Buscar dados da candidatura e validar se pertence à eleição da comissão logada
 try {
     $stmt = $pdo->prepare(
         "SELECT c.*, f.nome_completo AS funcionario_nome
@@ -28,19 +25,17 @@ try {
          WHERE c.id = ? AND c.eleicao_id = ?"
     );
     $stmt->execute([$candidato_id, $eleicao_id_comissao]);
-    $candidatura = $stmt->fetch(PDO::FETCH_ASSOC);
+    $candidatura_db = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$candidatura) {
+    if (!$candidatura_db) {
         $_SESSION['mensagem_erro_candidato'] = "Candidatura não encontrada ou não pertence à sua eleição.";
         header("Location: gerenciar_candidatos.php");
         exit();
     }
-    // Se não houver dados de formulário de uma tentativa anterior, preenche com dados do banco
-    if (empty($dados_formulario_edicao_candidato)) {
-        $dados_formulario_edicao_candidato = $candidatura;
+    if (empty($dados_formulario_edicao_candidato)) { // Só preenche com DB se não houver dados de tentativa anterior
+        $dados_formulario_edicao_candidato = $candidatura_db;
     }
-    $funcionario_info = ['nome_completo' => $candidatura['funcionario_nome']];
-
+    $funcionario_info = ['nome_completo' => $candidatura_db['funcionario_nome']]; // Pega nome do DB sempre
 
 } catch (PDOException $e) {
     error_log("Erro ao buscar candidatura para edição: " . $e->getMessage());
@@ -50,83 +45,104 @@ try {
 }
 
 $status_candidatura_permitidos = ['Inscrito', 'Aprovado', 'Reprovado', 'Eleito', 'Suplente', 'Não Eleito'];
-
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Editar Candidatura - Comissão</title>
-    <style>
-        body { font-family: sans-serif; margin: 0; background-color: #f8f9fa; }
-        .container { width: 70%; margin: 20px auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        h2, h3 { color: #333; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
-        .form-group input[type="text"],
-        .form-group input[type="number"],
-        .form-group textarea,
-        .form-group select { width: 100%; padding: 10px; box-sizing: border-box; border:1px solid #ced4da; border-radius:4px; }
-        .form-group textarea { min-height: 100px; }
-        .button { padding:10px 15px; background-color:#007bff; color:white; border:none; border-radius:4px; cursor:pointer; font-size: 1em; }
-        .button:hover { background-color:#0056b3; }
-        .erro-lista { list-style-type: none; padding: 0; margin: 0 0 15px 0; color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius:4px; }
-        .erro-lista li { padding: 10px; }
-        .nav-link { color: #007bff; text-decoration:none; margin-bottom:15px; display:inline-block;}
-        .info-candidato p { margin: 5px 0; }
-    </style>
+    <title>Editar Candidatura - CIPA Fácil</title>
+    <link href="../../src/styles/output.css" rel="stylesheet">
 </head>
-<body>
-    <div class="container">
-        <h2>Editar Candidatura</h2>
-        <a href="gerenciar_candidatos.php" class="nav-link">Voltar para Gerenciar Candidatos</a>
+<body class="bg-gray-100 font-sans">
 
-        <?php if ($funcionario_info): ?>
-            <div class="info-candidato">
-                <h3>Candidato: <?php echo htmlspecialchars($funcionario_info['nome_completo']); ?></h3>
+    <nav class="bg-azul-cipa text-white shadow-lg">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center py-4">
+                <div class="text-xl font-bold">
+                    Comissão: <?php echo htmlspecialchars($comissao_eleicao_titulo_logado); ?>
+                </div>
+                 <div>
+                    <span class="text-sm mr-4"><?php echo htmlspecialchars($comissao_nome_membro_logado . " - " . $comissao_papel_logado); ?></span>
+                    <a href="logout_comissao.php" class="px-4 py-2 bg-red-500 hover:bg-red-600 rounded-md text-sm font-medium transition-colors">Sair</a>
+                </div>
             </div>
-        <?php endif; ?>
+        </div>
+    </nav>
 
-        <?php if (!empty($erros_editar_candidatura)): ?>
-            <ul class="erro-lista">
-                <?php foreach ($erros_editar_candidatura as $erro): ?>
-                    <li><?php echo htmlspecialchars($erro); ?></li>
-                <?php endforeach; ?>
-            </ul>
-        <?php endif; ?>
+    <main class="container mx-auto p-6 mt-8">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-semibold text-cinza-chumbo">Editar Candidatura</h2>
+            <a href="gerenciar_candidatos.php" class="text-azul-cipa hover:text-blue-700">&larr; Voltar para Gerenciar Candidatos</a>
+        </div>
 
-        <form action="processa_editar_candidatura.php" method="POST">
-            <input type="hidden" name="candidato_id" value="<?php echo $candidato_id; ?>">
+        <div class="bg-white p-8 rounded-lg shadow-lg">
+            <?php if ($funcionario_info): ?>
+                <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
+                    <h3 class="text-lg font-semibold text-azul-cipa">Candidato: <?php echo htmlspecialchars($funcionario_info['nome_completo']); ?></h3>
+                    <p class="text-sm text-gray-600">Eleição: <?php echo htmlspecialchars($comissao_eleicao_titulo_logado); ?></p>
+                </div>
+            <?php endif; ?>
 
-            <div class="form-group">
-                <label for="numero_candidato">Número do Candidato (opcional):</label>
-                <input type="number" id="numero_candidato" name="numero_candidato" value="<?php echo htmlspecialchars($dados_formulario_edicao_candidato['numero_candidato'] ?? ''); ?>">
-            </div>
+            <?php if (!empty($erros_editar_candidatura)): ?>
+                <div class="p-4 mb-6 text-sm text-red-700 bg-red-100 border border-red-400 rounded-lg" role="alert">
+                    <p class="font-bold">Foram encontrados os seguintes erros:</p>
+                    <ul class="list-disc pl-5 mt-2">
+                        <?php foreach ($erros_editar_candidatura as $erro): ?>
+                            <li><?php echo htmlspecialchars($erro); ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            <?php endif; ?>
 
-            <div class="form-group">
-                <label for="nome_urna">Nome na Urna (opcional):</label>
-                <input type="text" id="nome_urna" name="nome_urna" value="<?php echo htmlspecialchars($dados_formulario_edicao_candidato['nome_urna'] ?? ''); ?>">
-            </div>
+            <form action="processa_editar_candidatura.php" method="POST" class="space-y-6">
+                <input type="hidden" name="candidato_id" value="<?php echo $candidato_id; ?>">
 
-            <div class="form-group">
-                <label for="plataforma_propostas">Plataforma/Propostas (opcional):</label>
-                <textarea id="plataforma_propostas" name="plataforma_propostas"><?php echo htmlspecialchars($dados_formulario_edicao_candidato['plataforma_propostas'] ?? ''); ?></textarea>
-            </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="numero_candidato" class="block text-sm font-medium text-gray-700">Número do Candidato (opcional):</label>
+                        <input type="number" id="numero_candidato" name="numero_candidato"
+                               value="<?php echo htmlspecialchars($dados_formulario_edicao_candidato['numero_candidato'] ?? ''); ?>"
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-azul-cipa focus:border-azul-cipa">
+                    </div>
+                    <div>
+                        <label for="nome_urna" class="block text-sm font-medium text-gray-700">Nome na Urna (opcional):</label>
+                        <input type="text" id="nome_urna" name="nome_urna"
+                               value="<?php echo htmlspecialchars($dados_formulario_edicao_candidato['nome_urna'] ?? ''); ?>"
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-azul-cipa focus:border-azul-cipa">
+                    </div>
+                </div>
 
-            <div class="form-group">
-                <label for="status_candidatura">Status da Candidatura:</label>
-                <select id="status_candidatura" name="status_candidatura" required>
-                    <?php foreach ($status_candidatura_permitidos as $status): ?>
-                        <option value="<?php echo $status; ?>" <?php echo (isset($dados_formulario_edicao_candidato['status_candidatura']) && $dados_formulario_edicao_candidato['status_candidatura'] == $status) ? 'selected' : ''; ?>>
-                            <?php echo $status; ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
+                <div>
+                    <label for="plataforma_propostas" class="block text-sm font-medium text-gray-700">Plataforma/Propostas (opcional):</label>
+                    <textarea id="plataforma_propostas" name="plataforma_propostas" rows="4"
+                              class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-azul-cipa focus:border-azul-cipa"><?php echo htmlspecialchars($dados_formulario_edicao_candidato['plataforma_propostas'] ?? ''); ?></textarea>
+                </div>
 
-            <button type="submit" class="button">Salvar Alterações</button>
-        </form>
-    </div>
+                <div>
+                    <label for="status_candidatura" class="block text-sm font-medium text-gray-700">Status da Candidatura:</label>
+                    <select id="status_candidatura" name="status_candidatura" required
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-azul-cipa focus:border-azul-cipa">
+                        <?php foreach ($status_candidatura_permitidos as $status): ?>
+                            <option value="<?php echo $status; ?>"
+                                <?php echo (isset($dados_formulario_edicao_candidato['status_candidatura']) && $dados_formulario_edicao_candidato['status_candidatura'] == $status) ? 'selected' : ''; ?>>
+                                <?php echo $status; ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="pt-5">
+                    <button type="submit"
+                            class="w-full md:w-auto flex justify-center py-3 px-6 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-azul-cipa hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-azul-cipa">
+                        Salvar Alterações na Candidatura
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+    <footer class="text-center p-4 mt-8 text-sm text-gray-500">
+        &copy; <?php echo date("Y"); ?> CIPA Fácil Online.
+    </footer>
 </body>
 </html>

@@ -2,7 +2,7 @@
 require_once '../../scripts/auth_comissao.php'; // Garante autenticação e define $comissao_eleicao_id_logado
 require_once '../../scripts/db_connection.php';
 
-$eleicao_id_comissao = $comissao_eleicao_id_logado;
+$eleicao_id_comissao = $comissao_eleicao_id_logado; // Vem de auth_comissao.php
 $erros = [];
 $dados_formulario = $_POST;
 
@@ -21,8 +21,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $stmt_check_owner = $pdo->prepare("SELECT * FROM candidatos WHERE id = ? AND eleicao_id = ?");
         $stmt_check_owner->execute([$candidato_id, $eleicao_id_comissao]);
         $candidatura_original = $stmt_check_owner->fetch(PDO::FETCH_ASSOC);
+
         if ($candidatura_original === false) {
-            $_SESSION['mensagem_erro_candidato'] = "Candidatura não encontrada ou não pertence à sua eleição (falha na edição).";
+            $_SESSION['mensagem_erro_candidato'] = "Candidatura não encontrada ou não pertence à sua eleição.";
             header("Location: gerenciar_candidatos.php");
             exit();
         }
@@ -34,23 +35,26 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 
     $numero_candidato_raw = trim(filter_input(INPUT_POST, 'numero_candidato'));
-    $numero_candidato = ($numero_candidato_raw === '') ? null : filter_var($numero_candidato_raw, FILTER_VALIDATE_INT);
+    $numero_candidato = ($numero_candidato_raw === '' || $numero_candidato_raw === null) ? null : filter_var($numero_candidato_raw, FILTER_VALIDATE_INT);
+
     $nome_urna = trim(filter_input(INPUT_POST, 'nome_urna'));
     $nome_urna = empty($nome_urna) ? null : $nome_urna;
+
     $plataforma_propostas = trim(filter_input(INPUT_POST, 'plataforma_propostas'));
     $plataforma_propostas = empty($plataforma_propostas) ? null : $plataforma_propostas;
+
     $status_candidatura = trim(filter_input(INPUT_POST, 'status_candidatura'));
 
     // Validações
-    if ($numero_candidato_raw !== '' && $numero_candidato === false) {
-        $erros[] = "Número do candidato deve ser um valor numérico.";
+    if ($numero_candidato_raw !== '' && $numero_candidato_raw !== null && $numero_candidato === false) { // false se não for int, mas não se for null
+        $erros[] = "Número do candidato deve ser um valor numérico válido ou vazio.";
     } elseif ($numero_candidato !== null && $numero_candidato <= 0) {
-        $erros[] = "Número do candidato deve ser positivo.";
+        $erros[] = "Número do candidato, se fornecido, deve ser positivo.";
     }
 
     $status_permitidos = ['Inscrito', 'Aprovado', 'Reprovado', 'Eleito', 'Suplente', 'Não Eleito'];
     if (empty($status_candidatura) || !in_array($status_candidatura, $status_permitidos)) {
-        $erros[] = "Status da candidatura inválido.";
+        $erros[] = "Status da candidatura inválido ou não fornecido.";
     }
 
     // Verificar unicidade do número do candidato (se alterado e fornecido)
@@ -63,27 +67,27 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             }
         } catch (PDOException $e) {
             error_log("Erro ao verificar unicidade do número do candidato (edição): " . $e->getMessage());
-            $erros[] = "Erro de banco de dados ao verificar número do candidato.";
+            $erros[] = "Erro de BD ao verificar número do candidato.";
         }
     }
 
     if (empty($erros)) {
         try {
             $sql = "UPDATE candidatos SET
-                        numero_candidato = ?,
-                        nome_urna = ?,
-                        plataforma_propostas = ?,
-                        status_candidatura = ?
-                    WHERE id = ? AND eleicao_id = ?";
+                        numero_candidato = :numero_candidato,
+                        nome_urna = :nome_urna,
+                        plataforma_propostas = :plataforma_propostas,
+                        status_candidatura = :status_candidatura
+                    WHERE id = :candidato_id AND eleicao_id = :eleicao_id";
 
             $stmt_update = $pdo->prepare($sql);
             $stmt_update->execute([
-                $numero_candidato,
-                $nome_urna,
-                $plataforma_propostas,
-                $status_candidatura,
-                $candidato_id,
-                $eleicao_id_comissao
+                ':numero_candidato' => $numero_candidato,
+                ':nome_urna' => $nome_urna,
+                ':plataforma_propostas' => $plataforma_propostas,
+                ':status_candidatura' => $status_candidatura,
+                ':candidato_id' => $candidato_id,
+                ':eleicao_id' => $eleicao_id_comissao
             ]);
 
             $_SESSION['mensagem_sucesso_candidato'] = "Candidatura atualizada com sucesso!";
@@ -92,10 +96,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         } catch (PDOException $e) {
             error_log("Erro ao editar candidatura: " . $e->getMessage());
-             if ($e->getCode() == '23000') {
+             if (isset($e->errorInfo[1]) && $e->errorInfo[1] == 1062) { // Código de erro para UNIQUE constraint violation no MySQL
                  $erros[] = "Erro: Número de candidato duplicado (verificação dupla).";
             } else {
-                $erros[] = "Erro ao atualizar candidatura no banco de dados. Detalhe: " . $e->getMessage();
+                $erros[] = "Erro ao atualizar candidatura no banco de dados."; // . $e->getMessage(); // Não expor e->getMessage() para o usuário final
             }
             $_SESSION['erros_editar_candidatura'] = $erros;
             $_SESSION['dados_formulario_edicao_candidato'] = $dados_formulario;
@@ -104,12 +108,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
     } else {
         $_SESSION['erros_editar_candidatura'] = $erros;
-        $_SESSION['dados_formulario_edicao_candidato'] = $dados_formulario; // Mantém os dados que o usuário tentou submeter
+        $_SESSION['dados_formulario_edicao_candidato'] = $dados_formulario;
         header("Location: editar_candidatura.php?candidato_id=" . $candidato_id);
         exit();
     }
 
 } else {
+    // Se não for POST, redireciona para a lista de candidatos, pois não há ID para editar sem POST
     header("Location: gerenciar_candidatos.php");
     exit();
 }

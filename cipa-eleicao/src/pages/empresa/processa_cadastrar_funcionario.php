@@ -9,6 +9,8 @@ $dados_formulario = $_POST; // Para repopular
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $nome_completo = trim($dados_formulario['nome_completo'] ?? '');
     $cpf = trim($dados_formulario['cpf'] ?? ''); // TODO: Implementar máscara e validação de formato/algoritmo
+    $data_nascimento_raw = trim($dados_formulario['data_nascimento'] ?? '');
+    $data_nascimento = empty($data_nascimento_raw) ? null : $data_nascimento_raw;
     $email = trim($dados_formulario['email'] ?? null);
     $email = empty($email) ? null : $email; // Tratar email vazio como NULL
     $matricula = trim($dados_formulario['matricula'] ?? null);
@@ -26,13 +28,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Validações básicas
     if (empty($nome_completo)) $erros[] = "Nome completo é obrigatório.";
     if (empty($cpf)) $erros[] = "CPF é obrigatório."; // TODO: Validar formato e algoritmo do CPF
+
+    if ($data_nascimento !== null) {
+        $dn = DateTime::createFromFormat('Y-m-d', $data_nascimento);
+        if (!($dn && $dn->format('Y-m-d') === $data_nascimento)) {
+            $erros[] = "Formato de Data de Nascimento inválido. Use AAAA-MM-DD.";
+        }
+    } // Pode ser opcional, então só valida se preenchido. Se for obrigatório, adicionar `else { $erros[] = "Data de nascimento é obrigatória."; }`
+
     if (!empty($email) && !filter_var($email, FILTER_VALIDATE_EMAIL)) $erros[] = "Formato de email inválido.";
     if (empty($data_admissao)) {
         $erros[] = "Data de admissão é obrigatória.";
     } else {
-        // Validar formato da data YYYY-MM-DD
-        $d = DateTime::createFromFormat('Y-m-d', $data_admissao);
-        if (!($d && $d->format('Y-m-d') === $data_admissao)) {
+        $da = DateTime::createFromFormat('Y-m-d', $data_admissao);
+        if (!($da && $da->format('Y-m-d') === $data_admissao)) {
             $erros[] = "Formato de data de admissão inválido. Use AAAA-MM-DD.";
         }
     }
@@ -80,14 +89,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     if (empty($erros)) {
         try {
-            $sql = "INSERT INTO funcionarios (empresa_id, filial_id, nome_completo, cpf, email, matricula, data_admissao, cargo, departamento, status_funcionario, permite_votar)
-                    VALUES (:empresa_id, :filial_id, :nome_completo, :cpf, :email, :matricula, :data_admissao, :cargo, :departamento, :status_funcionario, :permite_votar)";
+            $sql = "INSERT INTO funcionarios (empresa_id, filial_id, nome_completo, cpf, data_nascimento, email, matricula, data_admissao, cargo, departamento, status_funcionario, permite_votar)
+                    VALUES (:empresa_id, :filial_id, :nome_completo, :cpf, :data_nascimento, :email, :matricula, :data_admissao, :cargo, :departamento, :status_funcionario, :permite_votar)";
             $stmt_insert = $pdo->prepare($sql);
             $stmt_insert->execute([
                 ':empresa_id' => $empresa_id,
                 ':filial_id' => $filial_id,
                 ':nome_completo' => $nome_completo,
                 ':cpf' => $cpf,
+                ':data_nascimento' => $data_nascimento,
                 ':email' => $email,
                 ':matricula' => $matricula,
                 ':data_admissao' => $data_admissao,
